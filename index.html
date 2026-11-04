@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Entre Naves — Estación Espacial</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #07090c; color: #e8eef4; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+#canvas { display: block; width: 100%; height: 100%; background: #0b0f15; }
+#ui { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; }
+#zone { pointer-events: none; position: absolute; top: 28px; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 700; color: rgba(235,245,250,0.6); letter-spacing: 3px; text-transform: uppercase; text-shadow: 0 2px 12px rgba(0,0,0,0.9); white-space: nowrap; }
+#roletext { pointer-events: none; position: absolute; top: 42%; left: 50%; transform: translate(-50%,-50%); font-size: 36px; font-weight: 900; text-align: center; line-height: 1.25; color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,0.9); display: none; max-width: 86%; }
+.layer { pointer-events: none; position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4,7,11,0.82); flex-direction: column; gap: 12px; backdrop-filter: blur(4px); }
+.layer.show { display: flex; pointer-events: auto; }
+.layer h2 { font-size: 30px; letter-spacing: 3px; text-transform: uppercase; color: #fff; margin-bottom: 6px; text-shadow: 0 0 20px rgba(110,177,252,0.4); }
+.layer p { color: #c9dae8; font-size: 15px; max-width: 460px; text-align: center; line-height: 1.5; }
+.btn { background: linear-gradient(180deg,#2f4050,#1f2c37); border: 1px solid #527084; color: #eef4fb; padding: 12px 28px; font-size: 16px; font-weight: 700; border-radius: 10px; cursor: pointer; pointer-events: auto; letter-spacing: 1px; text-transform: uppercase; }
+.btn:hover { background: #364b5e; border-color: #8fb3e8; color:#fff; }
+.btn:active { transform: scale(0.96); }
+.btn.primary { background: linear-gradient(180deg,#1d4e2e,#143a23); border-color: #4caf7a; color:#d7f9e4; }
+.btn.primary:hover { background:#23633a; border-color:#7fd4a8; }
+.btn.danger { background: linear-gradient(180deg,#6b2a2a,#4a1c1c); border-color:#a84a4a; color:#ffc4c4; }
+.btn.danger:hover { background:#803434; border-color:#d06a6a; }
+.row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.opt { display: flex; align-items: center; gap: 8px; font-size: 14px; color:#cfdce9; margin: 6px 0; }
+.opt input { width: 17px; height: 17px; accent-color: #4caf7a; }
+select, input[type=text], input[type=number] { background: #111920; color: #e8eef4; border: 1px solid #3e4d5c; border-radius: 7px; padding: 6px 10px; font-size: 14px; }
+h1 { font-size: 44px; letter-spacing: 5px; text-transform: uppercase; color:#fff; margin-bottom: 6px; text-shadow: 0 0 24px rgba(110,177,252,0.35); text-align:center; }
+.sub { color:#a9c2d9; font-size:15px; text-align:center; margin-bottom:24px; }
+#chat { position: absolute; right: 12px; top: 92px; width: 270px; max-height: 300px; background: rgba(4,7,11,0.75); border: 1px solid #3e4d5c; border-radius: 10px; padding: 8px 10px; display: none; flex-direction: column; pointer-events: auto; z-index: 40; }
+#chat .ch { font-size: 11px; color:#8fa3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+#chatlog { flex: 1; overflow-y: auto; font-size: 13px; color:#d7e3ec; line-height: 1.45; margin-bottom: 6px; min-height: 120px; }
+#chatinput { width: 100%; font-size: 13px; }
+#actions { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; z-index: 40; flex-wrap: wrap; justify-content: center; }
+#sab { position: absolute; top: 10px; right: 12px; display: none; gap: 8px; pointer-events: auto; z-index: 40; }
+.taskwin { position: absolute; inset: 0; background: rgba(4,7,11,0.88); display: none; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 50; color:#fff; }
+.taskwin h3 { font-size: 20px; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 2px; }
+.minimap { position: absolute; left: 12px; bottom: 100px; width: 170px; height: 140px; background: rgba(4,7,11,0.7); border: 1px solid #3e4d5c; border-radius: 10px; pointer-events: none; padding: 6px; display: none; z-index: 35; }
+#txt { position: absolute; top: 12px; left: 12px; font-size: 13px; color: #93aebb; display:none; z-index:35; pointer-events:none;}
+.touch { position: absolute; bottom: 18px; width: 100%; display: flex; justify-content: space-between; padding: 0 18px; pointer-events: none; z-index: 45; }
+.joystick { position: relative; width: 110px; height: 110px; pointer-events: auto; }
+.joy-base { position: absolute; inset: 20px; border: 2px solid rgba(150,180,205,0.25); border-radius: 50%; background: rgba(255,255,255,0.04); }
+.joy-knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%,-50%); background: #7fb3e8; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 14px rgba(127,179,232,0.6); pointer-events: none; }
+.tb { pointer-events: auto; background: linear-gradient(180deg,#2f4050,#1f2c37); border:1px solid #527084; color:#eef4fb; padding: 10px 16px; border-radius: 10px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.tb:active { transform: scale(0.94); }
+.hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; color:#6d839a; pointer-events: none; z-index: 30; }
+.vote-card { border:1px solid #3e4d5c; background:#111920; border-radius: 10px; padding: 10px 14px; margin: 6px 0; display: flex; align-items: center; gap: 10px; cursor: pointer; pointer-events: auto; }
+.vote-card:hover { background:#1d2a35; border-color:#8fb3e8; }
+.vote-card.selected { border-color:#ffd166; background:#2a2512; }
+.vote-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; flex-shrink: 0; }
+.dead { opacity: 0.45; filter: grayscale(0.8); }
+@media (max-width: 700px) { h1 { font-size: 30px; } #roletext { font-size: 26px; } .btn { padding: 10px 22px; font-size: 14px; } #chat { width: 210px; } }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div id="ui">
+  <div id="txt">WASD / flechas para moverse &bull; E = usar &bull; Q = matar (impostor) &bull; R = reportar &bull; V = conducto &bull; C = sabotaje &bull; T = reunión</div>
+  <div id="zone">Sala de Aire</div>
+  <div id="roletext"></div>
+  <div id="chat"><div class="ch">chat</div><div id="chatlog"></div><input id="chatinput" placeholder="Escribir..."></div>
+  <div id="actions"></div>
+  <div id="sab"></div>
+  <div class="minimap" id="minimap"></div>
+  <div class="touch">
+    <div class="joystick"><div class="joy-base"></div><div class="joy-knob"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+      <button class="tb" id="btnKill" style="display:none;">Matar</button>
+      <button class="tb" id="btnReport" style="display:none;">Reportar</button>
+      <button class="tb" id="btnVent" style="display:none;">Conducto</button>
+      <button class="tb" id="btnSab" style="display:none;">Sabotaje</button>
+      <button class="tb" id="btnMeet" style="display:none;">Reunión</button>
+      <button class="tb" id="btnUse">Usar</button>
+      <button class="tb" id="btnChat">Chat</button>
+    </div>
+  </div>
+  <div class="hint">Toque una zona para enfocar el chat / controles táctiles activos en m&oacute;vil</div>
+
+  <div class="layer" id="layMenu">
+    <h1>Entre Naves</h1>
+    <p class="sub">Estaci&oacute;n espacial estilo Among Us &bull; 2D superior</p>
+    <button class="btn primary" onclick="game.enterLobby()">Entrar</button>
+    <button class="btn" onclick="game.openSettings()">Configuraci&oacute;n</button>
+  </div>
+
+  <div class="layer" id="laySettings">
+    <h2>Configuraci&oacute;n</h2>
+    <div class="opt"><label>Jugadores totales (incluidos bots)</label><input type="number" id="stPlayers" value="8" min="3" max="14"></div>
+    <div class="opt"><label>Impostores</label><input type="number" id="stImps" value="2" min="1" max="4"></div>
+    <div class="opt"><label>Tareas por tripulante (4-12)</label><input type="number" id="stTasks" value="6" min="4" max="12"></div>
+    <div class="opt"><label>Distancia localizador</label><input type="number" id="stLocDist" value="260" min="120" max="500"></div>
+    <div class="opt"><label>Duraci&oacute;n rastreo (s)</label><input type="number" id="stLocDur" value="60" min="15" max="90"></div>
+    <div class="opt"><label>Recuperaci&oacute;n localizador (s)</label><input type="number" id="stLocCd" value="15" min="5" max="20"></div>
+    <div class="opt"><label>Tiempo en conducto ingeniero (s, 0 = infinito)</label><input type="number" id="stEngVent" value="40" min="0" max="300"></div>
+    <div class="opt"><label>Disioluci&oacute;n cuerpo sierpe (s)</label><input type="number" id="stSnake" value="12" min="5" max="20"></div>
+    <div class="opt"><label>Invisibilidad fantasma (s)</label><input type="number" id="stGhost" value="40" min="10" max="40"></div>
+    <div class="row"><button class="btn" onclick="game.closeSettings()">Atr&aacute;s</button><button class="btn primary" onclick="game.applySettings()">Aplicar y volver</button></div>
+  </div>
+
+  <div class="layer" id="layLobby">
+    <h2>Sala de espera (Lobby)</h2>
+    <p id="lobbyInfo">Esperando jugadores...</p>
+    <div id="lobbyList" style="color:#cfdce9; font-size:14px; text-align:left; max-width:420px; margin:10px auto; line-height:1.8;"></div>
+    <div class="row"><button class="btn primary" id="btnStart">Empezar</button><button class="btn" onclick="game.openSettings()">Configuraci&oacute;n</button><button class="btn" onclick="game.showMenu()">Salir</button></div>
+  </div>
+
+  <div class="layer" id="layCinematic">
+    <h2 id="cineTitle">Llegando a la estaci&oacute;n...</h2>
+    <p id="cineSub">La nave aterriza y los tripulantes se preparan para bajar.</p>
+  </div>
+
+  <div class="layer taskwin" id="layTask">
+    <h3 id="taskTitle">Tarea</h3>
+    <div id="taskBody"></div>
+    <div class="row" style="margin-top:16px;"><button class="btn" onclick="game.closeTask()">Cerrar</button></div>
+  </div>
+
+  <div class="layer" id="layMeeting">
+    <h2 id="meetTitle">Reuni&oacute;n de emergencia</h2>
+    <p id="meetTimer">Tiempo: <span id="meetTime">60</span>s</p>
+    <div id="meetVotes" style="max-width:520px;margin:12px auto;"></div>
+    <div id="meetJudge" style="margin:10px 0; color:#ffd166; font-weight:700; display:none;"></div>
+    <div id="meetChat" style="display:flex;gap:8px;"></div>
+    <div class="row" id="meetActions" style="margin-top:12px;"></div>
+    <div id="meetResult" style="margin-top:14px; font-weight:800; font-size:18px; color:#ffd166; text-align:center; min-height:24px;"></div>
+  </div>
+
+  <div class="layer" id="layGameOver">
+    <h2 id="goTitle"></h2>
+    <p id="goMsg"></p>
+    <div class="row"><button class="btn primary" onclick="game.showMenu()">Men&uacute; principal</button></div>
+  </div>
+</div>
+<script>
+/* ====================== Entre Naves — Among Us style 2D top-down ====================== */
+(function(){
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = window.innerWidth, H = window.innerHeight;
+let width = W, height = H;
+function resize(){ width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+
+/* ---------- audio (optional, gesture-gated) ---------- */
+let AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audio = null;
+function ensureAudio(){
+  if(!AudioCtx || audio) return;
+  try { audio = new AudioCtx(); } catch(e){ audio = false; }
+}
+function beep(freq, type='sine', dur=0.08, vol=0.12){
+  if(!audio) return;
+  try {
+    const o = audio.createOscillator(); const g = audio.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, audio.currentTime);
+    g.gain.setValueAtTime(vol, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime+dur);
+    o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime+dur);
+  } catch(e){}
+}
+function toneOk(){ beep(880,'sine',0.06,0.1); setTimeout(()=>beep(1320,'sine',0.06,0.1),60); }
+function toneBad(){ beep(220,'sawtooth',0.16,0.15); }
+
+/* ---------- config ---------- */
+const CFG = {
+  players: 8, impostors: 2, tasksPerCrew: 6,
+  locDist: 260, locDur: 60, locCd: 15,
+  engVent: 40, snakeDissolve: 12, ghostInvis: 40,
+  cinematicSec: 7, roleRevealSec: 5, meetingSec: 60,
+  taskWin: 0 // crew win if all tasks done
+};
+const COLORS = ['#e74c3c','#f1c40f','#2ecc71','#3498db','#9b59b6','#e67e22','#1abc9c','#e91e63','#95a5a6','#f39c12','#7f8c8d','#c0392b'];
+const ROLES = {
+  CREW:'Tripulante', IMP:'Impostor', DET:'Localizador', JUDGE:'Juez', ENG:'Ingeniero',
+  ALERT:'Alertador', SNIPER:'Normal', SNAKE:'Sierpe', GHOST:'Fantasma', CHAM:'Camaleón'
+};
+const ROLE_COLOR = {
+  Crewmate:'#ecf0f1', Impostor:'#e74c3c', Localizador:'#3498db', Juez:'#f1c40f', Ingeniero:'#2ecc71',
+  Alertador:'#e91e63', Normal:'#e74c3c', Sierpe:'#8e44ad', Fantasma:'#9b59b6', Camaleón:'#e67e22'
+};
+
+/* ---------- map ---------- */
+const WORLD = { w: 2000, h: 1150 };
+// rooms: x,y,w,h,name
+const ROOMS = [
+  {x:220,y:150,w:320,h:220,name:'Sala de Aire'},
+  {x:640,y:150,w:340,h:240,name:'Cafetería'},
+  {x:1080,y:150,w:260,h:240,name:'Eléctrica'},
+  {x:1440,y:150,w:300,h:240,name:'Reactor'},
+  {x:220,y:430,w:300,h:240,name:'Médica'},
+  {x:640,y:430,w:300,h:200,name:'Administración'},
+  {x:1040,y:430,w:300,h:240,name:'Navegación'},
+  {x:1440,y:430,w:240,h:240,name:'Oxígeno'},
+  {x:220,y:710,w:300,h:240,name:'Almacén'},
+  {x:640,y:710,w:280,h:200,name:'Seguridad'},
+  {x:1040,y:710,w:300,h:200,name:'Comunicaciones'}
+];
+const WALLS = []; // {x,y,w,h}
+function addWall(x,y,w,h){ WALLS.push({x,y,w,h}); }
+// outer border
+addWall(0,0,WORLD.w,20); addWall(0,WORLD.h-20,WORLD.w,20); addWall(0,0,20,WORLD.h); addWall(WORLD.w-20,0,20,WORLD.h);
+// room perimeter walls with door gaps (simplified: walls between rooms)
+function roomWalls(r){
+  // left/right/top/bottom with door openings handled by gaps in placement
+  addWall(r.x, r.y, r.w, 14); addWall(r.x, r.y+r.h-14, r.w, 14);
+  addWall(r.x, r.y, 14, r.h); addWall(r.x+r.w-14, r.y, 14, r.h);
+}
+ROOMS.forEach(roomWalls);
+// internal corridor walls / separators
+addWall(550,150,16,240); addWall(970,150,16,240); addWall(1340,150,16,240);
+addWall(550,430,16,200); addWall(950,430,16,240); addWall(1340,430,16,240);
+addWall(550,710,16,200); addWall(950,710,16,200); addWall(1340,710,16,200);
+// emergency button in cafeteria
+const EMERGENCY = {x:800,y:260,r:26};
+// task stations
+const TASKS_DEF = [
+  {id:'wiring', name:'Conectar cables', room:'Eléctrica', type:'wiring', icon:'⚡'},
+  {id:'card', name:'Pasar tarjeta', room:'Administración', type:'card', icon:'💳'},
+  {id:'upload', name:'Subir datos', room:'Navegación', type:'upload', icon:'📡'},
+  {id:'download', name:'Descargar datos', room:'Comunicaciones', type:'download', icon:'⬇'},
+  {id:'garbage', name:'Vaciar basura', room:'Almacén', type:'garbage', icon:'🗑'},
+  {id:'calibrate', name:'Calibrar distribuidor', room:'Eléctrica', type:'calibrate', icon:'🎚'},
+  {id:'o2', name:'Llenar óxígeno', room:'Oxígeno', type:'o2', icon:'🌬'},
+  {id:'asteroids', name:'Limpiar asteroides', room:'Navegación', type:'asteroids', icon:'☄'}
+];
+const VENTS = [
+  {id:'a',x:300,y:300,room:'Sala de Aire',to:'b'},
+  {id:'b',x:780,y:320,room:'Cafetería',to:'a'},
+  {id:'c',x:1190,y:320,room:'Eléctrica',to:'d'},
+  {id:'d',x:1560,y:320,room:'Reactor',to:'c'},
+  {id:'e',x:300,y:600,room:'Médica',to:'f'},
+  {id:'f',x:750,y:560,room:'Administración',to:'e'},
+  {id:'g',x:1150,y:600,room:'Navegación',to:'h'},
+  {id:'h',x:1530,y:600,room:'Oxígeno',to:'g'},
+  {id:'i',x:300,y:880,room:'Almacén',to:'j'},
+  {id:'j',x:740,y:850,room:'Seguridad',to:'i'}
+];
+function findRoom(px,py){
+  for(const r of ROOMS) if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) return r;
+  return null;
+}
+
+// sabotage panels
+const SAB_PANELS = [
+  {id:'lights', name:'Luces', room:'Eléctrica', x:1200,y:250, fixTime:8},
+  {id:'reactor', name:'Reactor', room:'Reactor', x:1580,y:250, fixTime:10, critical:true},
+  {id:'o2', name:'Oxígeno', room:'Oxígeno', x:1550,y:520, fixTime:9, critical:true}
+];
+
+/* ---------- game state ---------- */
+let state = 'MENU'; // MENU, SETTINGS, LOBBY, CINEMATIC, PLAYING, DEAD, MEETING, TASK, GAMEOVER
+let players = []; // array of Player
+let bodies = [];
+let tasks = []; // active task instances
+let activeSab = null; // {id, start, end, panel}
+let sabotageTask = null; // crew task instance to fix sabotage
+let currentZone = 'Sala de Aire';
+let cam = {x:0,y:0};
+let shake = 0;
+let localId = null;
+let myRole = null;
+let meetingVote = null;
+let meetingStartedBy = null;
+let meetingEndTime = 0;
+let votes = {}; // voterId -> targetId
+let judgeMark = null; // playerId marked by judge
+let judgeUsesLeft = 0;
+let roleRevealEnd = 0;
+let cinematicEnd = 0;
+let taskTarget = null;
+let lastChat = '';
+let botsJoinTimer = 0;
+
+// input
+const input = { left:0,right:0,up:0,down:0, mx:0,my:0, touch:{active:false,x:0,y:0,dx:0,dy:0}, justClick:false };
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a') input.left=1;
+  if(e.key==='ArrowRight'||e.key==='d') input.right=1;
+  if(e.key==='ArrowUp'||e.key==='w') input.up=1;
+  if(e.key==='ArrowDown'||e.key==='s') input.down=1;
+  if(e.key==='e'||e.key===' ') game.interact();
+  if(e.key==='q') game.kill();
+  if(e.key==='r') game.report();
+  if(e.key==='v') game.vent();
+  if(e.key==='c') game.openSab();
+  if(e.key==='t') game.callMeeting();
+  if(e.key==='m') game.toggleChat();
+  if(e.key==='l') game.useLocator();
+});
+window.addEventListener('keyup', e=>{
+  if(e.key==='ArrowLeft'||e.key==='a') input.left=0;
+  if(e.key==='ArrowRight'||e.key==='d') input.right=0;
+  if(e.key==='ArrowUp'||e.key==='w') input.up=0;
+  if(e.key==='ArrowDown'||e.key==='s') input.down=0;
+});
+window.addEventListener('mousemove', e=>{ input.mx=e.clientX; input.my=e.clientY; });
+window.addEventListener('mousedown', ()=>{ input.justClick=true; ensureAudio(); });
+
+// touch joystick
+const joy = document.querySelector('.joy-knob'); const joyBase = document.querySelector('.joy-base');
+let joyTouchId=null, joyCx=0, joyCy=0;
+function touchJoy(e){
+  for(const t of e.changedTouches){
+    const r = joyBase.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    if(e.type==='touchstart' && joyTouchId===null){
+      const d = Math.hypot(t.clientX-cx, t.clientY-cy);
+      if(d < r.width/2){ joyTouchId=t.identifier; joyCx=cx; joyCy=cy; }
+    }
+    if(t.identifier===joyTouchId){
+      let dx = t.clientX - joyCx, dy = t.clientY - joyCy;
+      const mag = Math.hypot(dx,dy); const max = r.width/2 - 22;
+      if(mag>max){ dx*=max/mag; dy*=max/mag; }
+      input.touch.active = mag>14; input.touch.dx = dx/max; input.touch.dy = dy/max;
+      joy.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      if(e.type==='touchend'||e.type==='touchcancel'){ joyTouchId=null; input.touch.active=false; input.touch.dx=0; input.touch.dy=0; joy.style.transform='translate(-50%,-50%)'; }
+    }
+  }
+}
+joyBase.addEventListener('touchstart', touchJoy, {passive:false});
+window.addEventListener('touchmove', touchJoy, {passive:false});
+window.addEventListener('touchend', touchJoy, {passive:false});
+window.addEventListener('touchcancel', touchJoy, {passive:false});
+
+/* ---------- helpers ---------- */
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function rectCollide(p, w){
+  // circle vs rect, returns separation vector
+  const cx = p.x + (p.w||0)/2, cy = p.y + (p.h||0)/2;
+  const rx = w.x + w.w/2, ry = w.y + w.h/2;
+  let dx = Math.abs(cx-rx) - w.w/2 - (p.r||12);
+  let dy = Math.abs(cy-ry) - w.h/2 - (p.r||12);
+  if(dx<0 && dy<0){
+    if(dx>dy){ return {x: cx<rx?-dx:dx, y:0}; }
+    return {x:0, y: cy<ry?-dy:dy};
+  }
+  return {x:0,y:0};
+}
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function rnd(a,b){ return Math.random()*(b-a)+a; }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function chat(msg, from='sistema'){
+  const log = document.getElementById('chatlog');
+  const d = document.createElement('div');
+  d.innerHTML = `<span style="color:#ffd166">${from}:</span> ${msg}`;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+
+/* ---------- Player ---------- */
+class Player {
+  constructor(id, name, color, isBot=false){
+    this.id = id; this.name = name; this.color = color; this.isBot = isBot;
+    this.role = 'Crewmate';
+    this.alive = true;
+    this.x = 260; this.y = 260; this.vx=0; this.vy=0; this.r = 13;
+    this.angle = 0;
+    this.task = null;
+    this.vent = false; this.ventTime = 0; this.ventCd = 0;
+    this.killCd = 0;
+    this.locator = {active:false, end:0, cd:0, target:null};
+    this.judgeUses = 3;
+    this.invis = {active:false, end:0, smoke:0};
+    this.disguise = {active:false, end:0, target:null, egg:0};
+    this.dissolve = null; // for snake bodies killed by this impostor? handled globally
+    this.lastSeenByBot = 0;
+    this.spawnRoom = 'Sala de Aire';
+  }
+  get colorEff(){
+    if(!this.alive) return '#555';
+    if(this.invis.active && (Date.now()/1000)%0.4<0.2) return 'rgba(255,255,255,0.35)';
+    if(this.disguise.active) return this.disguise.color||this.color;
+    return this.color;
+  }
+  get nameEff(){ return this.disguise.active? this.disguise.name : this.name; }
+  get roleColor(){ return ROLE_COLOR[this.role] || '#ecf0f1'; }
+  update(dt){
+    if(!this.alive){ this.vx=this.vy=0; return; }
+    const spd = this.vent? 110 : 150;
+    let ax=0, ay=0;
+    if(this.id===localId){
+      ax = (input.right-input.left)*spd; ay = (input.down-input.up)*spd;
+      if(input.touch.active){ ax += input.touch.dx*spd; ay += input.touch.dy*spd; }
+      // normalize diagonal
+      const m = Math.hypot(ax,ay);
+      if(m>spd){ ax*=spd/m; ay*=spd/m; }
+    } else {
+      this.aiUpdate(dt);
+    }
+    // collision with walls (slide)
+    let nx = this.x + ax*dt, ny = this.y + ay*dt;
+    for(const w of WALLS){
+      const s = rectCollide({x:nx,y:ny,r:this.r}, w);
+      nx += s.x; ny += s.y;
+    }
+    // world bounds
+    nx = clamp(nx, this.r+20, WORLD.w-this.r-20);
+    ny = clamp(ny, this.r+20, WORLD.h-this.r-20);
+    this.x=nx; this.y=ny;
+    this.vx = nx - this.x + ax*dt; // approx
+    this.vx = ax; this.vy = ay;
+    if(Math.hypot(ax,ay)>5) this.angle = Math.atan2(ay,ax);
+    // timers
+    if(this.killCd>0) this.killCd-=dt;
+    if(this.ventCd>0) this.ventCd-=dt;
+    if(this.vent && this.ventTime>0){ this.ventTime-=dt; if(this.ventTime<=0){ this.exitVent(); } }
+    if(this.locator.active && Date.now()/1000 > this.locator.end){ this.locator.active=false; }
+    if(this.locator.cd>0) this.locator.cd-=dt;
+    if(this.invis.active && Date.now()/1000 > this.invis.end){ this.invis.active=false; this.invis.smoke=0; }
+    if(this.disguise.active){
+      this.disguise.end-=dt;
+      if(this.disguise.egg>0){ this.disguise.egg-=dt; if(this.disguise.egg<=0) this.revealForm(); }
+      else if(this.disguise.end<=0){ this.revealForm(); }
+    }
+  }
+  exitVent(){ this.vent=false; this.ventTime=0; }
+  aiUpdate(dt){
+    if(this.killCd>0) this.killCd-=dt;
+    if(this.ventCd>0) this.ventCd-=dt;
+    if(this.role==='Impostor' || this.role==='Sierpe' || this.role==='Fantasma' || this.role==='Camaleón'){
+      this.aiImpostor(dt);
+    } else {
+      this.aiCrew(dt);
+    }
+  }
+  nearestAlive(range=99999, excludeSelf=true){
+    let best=null, bd=range;
+    for(const p of players){
+      if(p===this||!p.alive) continue;
+      if(excludeSelf && p.id===this.id) continue;
+      const d = dist(this,p);
+      if(d<bd){ bd=d; best=p; }
+    }
+    return best;
+  }
+  lineOfSight(p){
+    const steps = Math.ceil(dist(this,p)/22);
+    for(let i=1;i<=steps;i++){
+      const t=i/steps;
+      const x = this.x+(p.x-this.x)*t, y=this.y+(p.y-this.y)*t;
+      for(const w of WALLS){
+        if(x>w.x&&x<w.x+w.w&&y>w.y&&y<w.y+w.h) return false;
+      }
+    }
+    return true;
+  }
+  aiCrew(dt){
+    const target = this.task && this.task.active? this.task : this.nearestTask();
+    if(!target){ this.wander(dt); return; }
+    const tx = target.x, ty = target.y;
+    this.moveTowards(tx,ty,dt,130);
+    if(dist(this,{x:tx,y:ty})<40){
+      if(this.task && this.task.active) return; // doing task
+      // start task
+      if(!this.task){ this.task = target; target.owner=this; }
+    }
+  }
+  nearestTask(){
+    let best=null, bd=9999;
+    for(const t of tasks){
+      if(t.owner && t.owner!==this) continue;
+      if(t.completed) continue;
+      const d=dist(this,t);
+      if(d<bd){ bd=d; best=t; }
+    }
+    return best;
+  }
+  moveTowards(tx,ty,dt,spd){
+    const dx = tx-this.x, dy = ty-this.y, d = Math.hypot(dx,dy);
+    if(d<5) return;
+    this.vx = dx/d*spd; this.vy = dy/d*spd;
+    let nx = this.x + this.vx*dt, ny = this.y + this.vy*dt;
+    for(const w of WALLS){ const s = rectCollide({x:nx,y:ny,r:this.r}, w); nx+=s.x; ny+=s.y; }
+    this.x=nx; this.y=ny;
+    this.angle = Math.atan2(dy,dx);
+  }
+  wander(dt){
+    if(Math.random()<0.02){ this.vx = (Math.random()-0.5)*120; this.vy = (Math.random()-0.5)*120; }
+    let nx = this.x + this.vx*dt, ny = this.y + this.vy*dt;
+    for(const w of WALLS){ const s = rectCollide({x:nx,y:ny,r:this.r}, w); nx+=s.x; ny+=s.y; }
+    this.x=clamp(nx,20,WORLD.w-20); this.y=clamp(ny,20,WORLD.h-20);
+    if(Math.hypot(this.vx,this.vy)>5) this.angle = Math.atan2(this.vy,this.vx);
+  }
+  aiImpostor(dt){
+    const victim = this.findVictim();
+    if(victim && dist(this,victim)<30 && this.killCd<=0){
+      this.doKill(victim);
+      return;
+    }
+    if(victim && dist(this,victim)<220 && this.lineOfSight(victim)){
+      this.moveTowards(victim.x,victim.y,dt,150);
+      return;
+    }
+    // wander / sabotage sometimes
+    if(Math.random()<0.005){ game.triggerSabotage('lights'); }
+    this.wander(dt*0.6);
+  }
+  findVictim(){
+    let best=null, bd=260;
+    for(const p of players){
+      if(p===this||!p.alive||p.vent) continue;
+      const d = dist(this,p);
+      if(d<bd && this.lineOfSight(p)){ bd=d; best=p; }
+    }
+    return best;
+  }
+  doKill(v){
+    v.alive=false;
+    const role = this.role;
+    const killTime = Date.now()/1000;
+    bodies.push({x:v.x,y:v.y,color:v.color,name:v.name,role:v.role, time:killTime,
+                 dissolve: role==='Sierpe'? (CFG.snakeDissolve||12) : null,
+                 killerId: this.id, reported:false});
+    this.killCd = 1.5;
+    chat(`${v.name} ha sido eliminado.`, 'sistema');
+    if(role==='Sierpe') chat(`El cuerpo de ${v.name} se está disolviendo...`, 'sistema');
+    // bots who saw it
+    for(const p of players){ if(p.isBot&&p.alive&&p.lineOfSight(v)){ p.lastSeenByBot = killTime; } }
+  }
+  draw(){
+    if(!this.alive && !this.vent) return; // ghost not drawn except spectator handled elsewhere
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    if(this.invis.active){
+      ctx.globalAlpha = 0.45;
+      if(this.invis.smoke>0){
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(0,0,18+Math.sin(Date.now()/100)*6,0,Math.PI*2); ctx.fill();
+        this.invis.smoke-=0.05;
+      }
+    }
+    ctx.fillStyle = this.colorEff;
+    ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    // visor
+    ctx.fillStyle='#222';
+    ctx.save(); ctx.rotate(this.angle);
+    ctx.beginPath(); ctx.moveTo(10,-6); ctx.lineTo(16,0); ctx.lineTo(10,6); ctx.fill(); ctx.restore();
+    // role marker
+    ctx.fillStyle = this.roleColor;
+    ctx.font = '10px sans-serif'; ctx.textAlign='center'; ctx.fillText(this.role[0], 0, -this.r-10);
+    // name
+    ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(this.nameEff, 0, -this.r-22);
+    if(this.killCd>0){ ctx.fillStyle='rgba(231,76,60,0.8)'; ctx.beginPath(); ctx.arc(0,0,this.r+4,0,Math.PI*2); ctx.stroke(); }
+    if(this.disguise.active && this.disguise.egg>0){
+      ctx.fillStyle='rgba(255,209,102,0.9)'; ctx.beginPath(); ctx.arc(0,0,this.r+8,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='12px sans-serif'; ctx.fillText('🥚',0,3);
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------- Task instances ---------- */
+class Task {
+  constructor(def){
+    this.def = def;
+    const r = findRoomPos(def.room);
+    this.x = r.x + r.w/2 + (Math.random()-0.5)*120;
+    this.y = r.y + r.h/2 + (Math.random()-0.5)*120;
+    this.r = 16;
+    this.completed = false;
+    this.active = false;
+    this.owner = null;
+    this.progress = 0;
+    this.data = {};
+  }
+  draw(){
+    if(this.completed) return;
+    ctx.save(); ctx.translate(this.x,this.y);
+    ctx.fillStyle = this.active? '#4caf7a' : '#6fb1fc';
+    ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText(this.def.icon,0,4);
+    ctx.restore();
+    // label
+    ctx.fillStyle = this.active?'#4caf7a':'#cfdce9';
+    ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(this.def.name, this.x, this.y-24);
+  }
+}
+function findRoomPos(name){
+  for(const r of ROOMS) if(r.name===name) return r;
+  return ROOMS[0];
+}
+
+/* ---------- game object ---------- */
+const game = {
+  start(){
+    ensureAudio();
+    this.showMenu();
+    toneOk();
+  },
+  showMenu(){ state='MENU'; setLayers(['layMenu']); document.getElementById('txt').style.display='block'; },
+  openSettings(){ state='SETTINGS'; setLayers(['laySettings']); },
+  closeSettings(){ this.showMenu(); },
+  applySettings(){
+    CFG.players = parseInt(document.getElementById('stPlayers').value)||8;
+    CFG.impostors = parseInt(document.getElementById('stImps').value)||2;
+    CFG.tasksPerCrew = parseInt(document.getElementById('stTasks').value)||6;
+    CFG.locDist = parseInt(document.getElementById('stLocDist').value)||260;
+    CFG.locDur = parseInt(document.getElementById('stLocDur').value)||60;
+    CFG.locCd = parseInt(document.getElementById('stLocCd').value)||15;
+    CFG.engVent = parseInt(document.getElementById('stEngVent').value)||40;
+    CFG.snakeDissolve = parseInt(document.getElementById('stSnake').value)||12;
+    CFG.ghostInvis = parseInt(document.getElementById('stGhost').value)||40;
+    // clamp
+    CFG.impostors = clamp(CFG.impostors,1,Math.min(4,Math.floor(CFG.players/2)));
+    CFG.tasksPerCrew = clamp(CFG.tasksPerCrew,4,12);
+    this.showMenu();
+    chat('Configuración aplicada.', 'sistema');
+  },
+  enterLobby(){
+    state='LOBBY'; setLayers(['layLobby']);
+    this.updateLobby();
+    botsJoinTimer = 0;
+  },
+  updateLobby(){
+    const list = document.getElementById('lobbyList');
+    list.innerHTML = '';
+    const n = CFG.players;
+    for(let i=0;i<n;i++){
+      const name = i===0? 'Tú' : `Bot ${i}`;
+      const d = document.createElement('div');
+      d.innerHTML = `<span style="color:${COLORS[i%COLORS.length]}">●</span> ${name} ${i===0?' (tú)':''}`;
+      list.appendChild(d);
+    }
+    document.getElementById('btnStart').onclick = ()=> this.startGame();
+  },
+  startGame(){
+    state='CINEMATIC'; setLayers(['layCinematic']);
+    document.getElementById('txt').style.display='none';
+    document.getElementById('cineTitle').textContent='Viaje a la estación...';
+    document.getElementById('cineSub').textContent='La nave se acerca a la base espacial. Preparándose para aterrizar.';
+    cinematicEnd = Date.now()/1000 + CFG.cinematicSec;
+    this.setupPlayers();
+  },
+  setupPlayers(){
+    players = [];
+    const names = ['Tú','Bot Alpha','Bot Beta','Bot Gamma','Bot Delta','Bot Epsilon','Bot Zeta','Bot Eta','Bot Theta','Bot Iota','Bot Kappa','Bot Lambda','Bot Mu','Bot Nu'];
+    const colorOrder = shuffle([...COLORS]);
+    for(let i=0;i<CFG.players;i++){
+      const p = new Player(i, names[i]||`Jugador ${i+1}`, colorOrder[i%COLORS.length], i>0);
+      p.x = 260 + (i%4)*20; p.y = 260 + Math.floor(i/4)*20;
+      players.push(p);
+    }
+    localId = 0;
+    this.assignRoles();
+    this.placeTasks();
+  },
+  assignRoles(){
+    const idx = shuffle(players.map((_,i)=>i));
+    const impCount = CFG.impostors;
+    const impIds = new Set(idx.slice(0, impCount));
+    const crewIds = idx.slice(impCount);
+    // special roles
+    const specials = shuffle(['Localizador','Juez','Ingeniero','Alertador']);
+    const sImp = shuffle(['Sierpe','Fantasma','Camaleón']);
+    let si=0;
+    // impostor roles
+    [...impIds].forEach((id,i)=>{
+      const p = players[id];
+      p.role = 'Impostor';
+      if(i<sImp.length){ p.role = sImp[i]; p.roleBase='Impostor'; }
+    });
+    let ss=0;
+    crewIds.forEach((id,i)=>{
+      const p = players[id];
+      p.role = 'Tripulante';
+      if(ss<specials.length && i%2===0){ p.role = specials[ss]; ss++; }
+    });
+    myRole = players[localId].role;
+    // give engineer vent time
+    players.forEach(p=>{
+      if(p.role==='Ingeniero'){ p.ventTime = CFG.engVent===0?999999:CFG.engVent; }
+      if(p.role==='Juez') p.judgeUses = 3;
+    });
+  },
+  placeTasks(){
+    tasks = [];
+    const crew = players.filter(p=>p.role!=='Impostor'&&p.role!=='Sierpe'&&p.role!=='Fantasma'&&p.role!=='Camaleón');
+    const need = crew.length * CFG.tasksPerCrew;
+    const pool = shuffle([...TASKS_DEF]);
+    let ti=0;
+    for(let i=0;i<need;i++){
+      const def = pool[ti%pool.length]; ti++;
+      const t = new Task(def);
+      tasks.push(t);
+    }
+    // distribute
+    let ci=0;
+    for(const t of tasks){
+      const p = crew[ci%crew.length]; ci++;
+      if(!p.task) p.task = t;
+    }
+  },
+  beginCinematicPhase2(){
+    // landing + disembark + roles
+    document.getElementById('cineTitle').textContent='Aterrizando en la estación...';
+    document.getElementById('cineSub').textContent='Todos se preparan para salir a la base.';
+    cinematicEnd = Date.now()/1000 + 4;
+    setTimeout(()=>this.revealRoles(), 4200);
+  },
+  revealRoles(){
+    state='PLAYING';
+    setLayers([]);
+    // place players at airlock
+    players.forEach((p,i)=>{ p.x = 260 + i*18; p.y = 220; p.alive=true; });
+    cam = {x: players[localId].x, y: players[localId].y};
+    currentZone = findRoom(players[localId].x, players[localId].y)?.name || 'Sala de Aire';
+    document.getElementById('actions').innerHTML = this.actionButtonsHTML();
+    // role reveal
+    const p = players[localId];
+    const el = document.getElementById('roletext');
+    el.style.display='block';
+    if(p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón'){
+      el.innerHTML = `<div style="color:#e74c3c">Eres <b style="color:${ROLE_COLOR[p.role]}">${ROLES[p.role]}</b></div>`;
+      el.style.color='#e74c3c';
+    } else {
+      el.innerHTML = `<div style="color:#4caf7a">Eres <b>${ROLES[p.role]}</b></div>`;
+      el.style.color='#4caf7a';
+    }
+    chat(`Tu rol: ${ROLES[p.role]}. ${this.roleHint(p)}`, 'sistema');
+    roleRevealEnd = Date.now()/1000 + CFG.roleRevealSec;
+    setTimeout(()=>{ el.style.display='none'; }, CFG.roleRevealSec*1000);
+    toneOk();
+  },
+  roleHint(p){
+    const hints = {
+      Ingeniero:'Puedes usar conductos. V = entrar/salir.',
+      Localizador:'L = localizar al jugador más cercano en el mapa.',
+      Juez:'Tienes 3 votos decisivos en reuniones.',
+      Sierpe:'Tus muertes disuelven cuerpos tras unos segundos.',
+      Fantasma:'C = volverte invisible hasta 40s (humo al cambiar).',
+      Camaleón:'Matar copia la forma de la víctima brevemente.',
+      Tripulante:'Completa tus tareas y vota en las reuniones.'
+    };
+    return hints[p.role]||'';
+  },
+  actionButtonsHTML(){
+    const p = players[localId];
+    let html='';
+    if(!p.alive) return '<button class="tb" onclick="game.respawnGhost()">Espectro (observar)</button>';
+    if(p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón'){
+      if(p.killCd<=0) html += '<button class="tb danger" id="btnKill" onclick="game.kill()">Matar</button>';
+      else html += '<button class="tb" disabled style="opacity:.5">Matar (espera)</button>';
+    }
+    html += '<button class="tb" id="btnReport" onclick="game.report()">Reportar</button>';
+    if((p.role==='Impostor'||p.role==='Ingeniero') && p.ventCd<=0) html += '<button class="tb" id="btnVent" onclick="game.vent()">Conducto</button>';
+    if(p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón') html += '<button class="tb" id="btnSab" onclick="game.openSab()">Sabotaje</button>';
+    html += '<button class="tb" id="btnMeet" onclick="game.callMeeting()">Reunión</button>';
+    html += '<button class="tb" id="btnUse" onclick="game.interact()">Usar</button>';
+    html += '<button class="tb" id="btnChat" onclick="game.toggleChat()">Chat</button>';
+    return html;
+  },
+  interact(){
+    if(state!=='PLAYING') return;
+    const p = players[localId]; if(!p||!p.alive||p.vent) return;
+    // emergency button
+    if(dist(p, EMERGENCY)<40){ this.callMeeting(); return; }
+    // task
+    let nearest=null, bd=46;
+    for(const t of tasks){
+      if(!t.completed && (!t.owner || t.owner===p)) {
+        const d = dist(p,t);
+        if(d<bd){ bd=d; nearest=t; }
+      }
+    }
+    if(nearest){ this.startTask(nearest); return; }
+    // vent
+    for(const v of VENTS){
+      if(dist(p,v)<40){ this.enterVent(v); return; }
+    }
+    // sabotage fix
+    if(sabotageTask && dist(p,{x:sabotageTask.x,y:sabotageTask.y})<46){
+      this.startTask(sabotageTask);
+    }
+    chat('No hay nada aquí para usar.', 'sistema');
+  },
+  kill(){
+    if(state!=='PLAYING') return;
+    const p = players[localId];
+    if(!p||!p.alive||p.vent||p.killCd>0) return;
+    // nearest alive non-impostor
+    let victim=null, bd=34;
+    for(const q of players){
+      if(q===p||!q.alive||q.vent) continue;
+      if(q.role==='Impostor'||q.role==='Sierpe'||q.role==='Fantasma'||q.role==='Camaleón') continue;
+      const d = dist(p,q);
+      if(d<bd){ bd=d; victim=q; }
+    }
+    if(!victim){ chat('No hay nadie cerca para matar.', 'sistema'); return; }
+    p.doKill(victim);
+    toneBad();
+    this.checkWin();
+  },
+  report(){
+    if(state!=='PLAYING') return;
+    const p = players[localId]; if(!p||!p.alive||p.vent) return;
+    let nearest=null, bd=50;
+    for(const b of bodies){
+      if(b.reported) continue;
+      const d = dist(p,b);
+      if(d<bd){ bd=d; nearest=b; }
+    }
+    if(!nearest){ chat('No hay cadáver cerca.', 'sistema'); return; }
+    nearest.reported=true;
+    this.callMeeting('report');
+  },
+  vent(){
+    if(state!=='PLAYING') return;
+    const p = players[localId];
+    if(!p||!p.alive||p.killCd>0) return;
+    const canVent = (p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón'||p.role==='Ingeniero');
+    if(!canVent){ chat('No puedes usar conductos.', 'sistema'); return; }
+    if(p.ventCd>0){ chat('Conducto en reutilización.', 'sistema'); return; }
+    if(p.vent){ this.exitVentUI(); return; }
+    // find nearby vent
+    let nv=null;
+    for(const v of VENTS){ if(dist(p,v)<52){ nv=v; break; } }
+    if(!nv){ chat('No estás cerca de un conducto.', 'sistema'); return; }
+    this.enterVent(nv);
+  },
+  enterVent(v){
+    const p = players[localId];
+    p.vent = true;
+    const limit = p.role==='Ingeniero'? p.ventTime : 6;
+    p.ventTime = limit===999999?999999:limit;
+    p.ventCd = 5;
+    cam = {x:p.x, y:p.y};
+    chat('Entrado al conducto.', 'sistema');
+    toneOk();
+    this.updateActions();
+  },
+  exitVentUI(){
+    const p = players[localId];
+    p.vent=false; p.ventTime=0; p.ventCd=3;
+    chat('Salido del conducto.', 'sistema');
+    this.updateActions();
+  },
+  openSab(){
+    if(state!=='PLAYING') return;
+    const p = players[localId];
+    if(!(p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón')){ chat('Solo los impostores sabotean.', 'sistema'); return; }
+    const el = document.getElementById('sab');
+    el.innerHTML = '';
+    for(const panel of SAB_PANELS){
+      const b = document.createElement('button');
+      b.className='tb danger';
+      b.textContent = `Sabotear ${panel.name}`;
+      b.onclick = ()=> this.triggerSabotage(panel.id);
+      el.appendChild(b);
+    }
+    el.style.display = el.children.length? 'flex':'none';
+  },
+  triggerSabotage(id){
+    if(activeSab) return;
+    const panel = SAB_PANELS.find(s=>s.id===id);
+    if(!panel) return;
+    activeSab = {id:panel.id, start: Date.now()/1000, end: Date.now()/1000 + (panel.critical?45:60), panel, fixed:false};
+    sabotageTask = null;
+    chat(`SABOTAJE: ${panel.name} desactivado.`, 'sistema');
+    toneBad();
+    document.getElementById('sab').style.display='none';
+    this.createSabotageTask(panel);
+    this.checkWin();
+  },
+  createSabotageTask(panel){
+    // sabotage task placed at panel position for crew to fix
+    const def = {id:'sab', name:`Reparar ${panel.name}`, room:panel.room, type:'sab', icon:'🔧'};
+    const t = new Task(def);
+    t.x = panel.x; t.y = panel.y;
+    sabotageTask = t;
+    tasks.push(t);
+  },
+  callMeeting(by='button'){
+    if(state==='MEETING') return;
+    if(activeSab && activeSab.critical){ chat('No se puede reunirse durante sabotaje crítico.', 'sistema'); return; }
+    state='MEETING'; setLayers(['layMeeting']);
+    meetingStartedBy = by;
+    meetingEndTime = Date.now()/1000 + CFG.meetingSec;
+    votes = {}; judgeMark = null;
+    const p = players[localId];
+    judgeUsesLeft = p&&p.role==='Juez'? p.judgeUses : 0;
+    this.renderMeeting();
+    const ev = document.getElementById('meetTimer');
+    const tick = ()=>{
+      if(state!=='MEETING') return;
+      const rem = Math.ceil(meetingEndTime - Date.now()/1000);
+      ev.textContent = rem>0? rem:0;
+      if(rem<=0) this.endMeeting();
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+  renderMeeting(){
+    const cont = document.getElementById('meetVotes');
+    cont.innerHTML = '';
+    const alive = players.filter(pl=>pl.alive);
+    alive.forEach(pl=>{
+      const card = document.createElement('div');
+      card.className = 'vote-card' + (meetingVote===pl.id?' selected':'');
+      card.innerHTML = `<div class="vote-dot" style="background:${pl.color}"></div>
+        <div style="flex:1"><div style="font-weight:700">${pl.nameEff}</div><div style="font-size:12px;color:#8fa3b8">${ROLES[pl.role]}</div></div>
+        <div style="color:${pl.roleColor}">●</div>`;
+      card.onclick = ()=>{ meetingVote = pl.id; this.renderMeeting(); };
+      cont.appendChild(card);
+    });
+    const judgeEl = document.getElementById('meetJudge');
+    if(players[localId] && players[localId].role==='Juez' && judgeUsesLeft>0){
+      judgeEl.style.display='block';
+      judgeEl.textContent = `Voto decisivo restante: ${judgeUsesLeft} (marca a un jugador antes de votar)`;
+    } else { judgeEl.style.display='none'; }
+    // actions
+    const act = document.getElementById('meetActions');
+    act.innerHTML='';
+    if(meetingVote!==null){
+      const b = document.createElement('button'); b.className='btn primary'; b.textContent='Votar expulsar';
+      b.onclick=()=>{ votes[localId]=meetingVote; this.castVoteLocal(); };
+      act.appendChild(b);
+    }
+    if(players[localId] && players[localId].role==='Juez' && judgeUsesLeft>0 && meetingVote!==null){
+      const b = document.createElement('button'); b.className='btn danger'; b.textContent='Voto decisivo (mazo)';
+      b.onclick=()=>{ judgeMark = meetingVote; judgeUsesLeft--; votes[localId]=meetingVote; this.castVoteLocal(); chat('El juez ha marcado a un sospechoso.', 'sistema'); this.renderMeeting(); };
+      act.appendChild(b);
+    }
+    const skip = document.createElement('button'); skip.className='btn'; skip.textContent='Votar saltar';
+    skip.onclick=()=>{ votes[localId]=null; this.castVoteLocal(); };
+    act.appendChild(skip);
+    // bot votes auto
+    this.botMeetingVotes();
+  },
+  castVoteLocal(){
+    if(players[localId]) chat(`Votaste por ${meetingVote? players.find(x=>x.id===meetingVote)?.nameEff||'desconocido':'saltar'}.`, 'sistema');
+    meetingVote = null;
+    this.renderMeeting();
+  },
+  botMeetingVotes(){
+    // bots vote shortly
+    setTimeout(()=>{
+      for(const p of players){
+        if(p.isBot && p.alive && votes[p.id]===undefined){
+          // if saw a kill recently, vote killer
+          let target=null;
+          if(p.lastSeenByBot){
+            const b = bodies.find(bd=> Math.abs(bd.time - p.lastSeenByBot)<3 && bd.killerId!==undefined);
+            if(b) target = players.find(x=>x.id===b.killerId);
+          }
+          if(!target) target = pick(players.filter(x=>x.alive && x!==p && !(x.role==='Impostor'||x.role==='Sierpe'||x.role==='Fantasma'||x.role==='Camaleón')));
+          votes[p.id] = target? target.id: null;
+        }
+      }
+    }, 1500);
+  },
+  endMeeting(){
+    if(state!=='MEETING') return;
+    // tally
+    const tally = {};
+    for(const v of Object.values(votes)) if(v!==null) tally[v] = (tally[v]||0)+1;
+    let ejected = null, top=0;
+    for(const [id,c] of Object.entries(tally)){
+      if(c>top){ top=c; ejected=id; }
+    }
+    // tie check
+    const tops = Object.entries(tally).filter(([,c])=>c===top);
+    if(tops.length>1) ejected = null;
+    const p = players[localId];
+    // judge verdict
+    if(judgeMark!==null && ejected===judgeMark){
+      const marked = players.find(x=>x.id===judgeMark);
+      const isImp = marked && (marked.role==='Impostor'||marked.role==='Sierpe'||marked.role==='Fantasma'||marked.role==='Camaleón');
+      document.getElementById('meetResult').innerHTML = isImp?
+        `El juez ha hablado y el veredicto es... ${marked.nameEff} era un impostor.` :
+        `El juez ha hablado y ${marked.nameEff} no era impostor. El juez es expulsado en su lugar.`;
+      if(!isImp){
+        ejected = localId;
+        players[localId].alive=false;
+      } else {
+        players.find(x=>x.id===judgeMark).alive=false;
+      }
+    } else if(ejected!==null){
+      document.getElementById('meetResult').textContent = `${players.find(x=>x.id===ejected).nameEff} ha sido expulsado.`;
+      players.find(x=>x.id===ejected).alive=false;
+    } else {
+      document.getElementById('meetResult').textContent = 'Empate. Nadie es expulsado.';
+    }
+    chat(document.getElementById('meetResult').textContent, 'sistema');
+    setTimeout(()=>{
+      this.checkWin();
+      if(state==='MEETING'){ state='PLAYING'; setLayers([]); this.updateActions(); }
+    }, 2200);
+  },
+  toggleChat(){
+    const el = document.getElementById('chat');
+    const disp = el.style.display === 'flex'? 'none':'flex';
+    el.style.display = disp;
+    if(disp==='flex'){
+      const inp = document.getElementById('chatinput');
+      inp.focus();
+      inp.onkeydown = (e)=>{ if(e.key==='Enter'){ this.sendChat(); } };
+    }
+  },
+  sendChat(){
+    const inp = document.getElementById('chatinput');
+    const msg = inp.value.trim(); if(!msg) return;
+    inp.value='';
+    const p = players[localId];
+    this.addChatMsg(msg, p.nameEff, p.color);
+    // bots react
+    setTimeout(()=>{
+      const b = pick(players.filter(x=>x.isBot&&x.alive));
+      if(b && Math.random()<0.4) this.addChatMsg(pick(['¿Quién es?','Voto por X','Yo estuve en electricidad','Sospechoso']), b.nameEff, b.color);
+    }, 900);
+  },
+  addChatMsg(msg, name, color){
+    const log = document.getElementById('chatlog');
+    const d = document.createElement('div');
+    d.innerHTML = `<span style="color:${color}">${name}:</span> ${msg}`;
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  },
+  useLocator(){
+    const p = players[localId];
+    if(!p||!p.alive) return;
+    if(p.role!=='Localizador'){ chat('Solo el localizador puede rastrear.', 'sistema'); return; }
+    if(p.locator.cd>0){ chat(`Localizador en reutilización (${Math.ceil(p.locator.cd)}s).`, 'sistema'); return; }
+    const target = p.nearestAlive(CFG.locDist);
+    if(!target){ chat('No hay nadie en rango.', 'sistema'); return; }
+    p.locator = {active:true, end: Date.now()/1000 + CFG.locDur, cd: CFG.locCd, target: target.id};
+    chat(`Localizando a ${target.nameEff} (${Math.round(CFG.locDur)}s).`, 'sistema');
+    toneOk();
+  },
+  startTask(t){
+    if(t.completed) return;
+    t.active = true; t.owner = players[localId];
+    taskTarget = t;
+    state='TASK'; setLayers(['layTask']);
+    document.getElementById('taskTitle').textContent = t.def.name;
+    document.getElementById('taskBody').innerHTML = this.taskUI(t);
+  },
+  taskUI(t){
+    const ty = t.def.type;
+    if(ty==='wiring') return `<div style="text-align:center;color:#cfdce9">Conecta cada cable del mismo color: haz clic en un punto izquierdo y luego en el punto derecho del mismo color.</div>
+      <div id="wireUI" style="display:flex;gap:26px;justify-content:center;margin-top:18px;"></div>
+      <div id="wireMsg" style="margin-top:12px;color:#ffd166;font-weight:700;"></div>`;
+    if(ty==='card') return `<div style="text-align:center;color:#cfdce9">Desliza la tarjeta a la velocidad correcta: suelta dentro de la zona verde.</div>
+      <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-top:18px;">
+        <div style="width:150px;height:6px;background:#223;border-radius:3px;position:relative;"><div id="cardZone" style="position:absolute;left:40%;width:20%;height:100%;background:#4caf7a;opacity:0.6;border-radius:3px;"></div><div id="cardBar" style="position:absolute;left:0;top:-6px;width:14px;height:18px;background:#fff;border-radius:4px;box-shadow:0 0 8px #fff;"></div></div>
+      </div>
+      <div id="cardMsg" style="margin-top:12px;color:#ffd166;font-weight:700;"></div>`;
+    if(ty==='upload'||ty==='download') return `<div style="text-align:center;color:#cfdce9">Mantén presionado para ${ty==='download'?'descargar':'subir'} los datos al 100%.</div>
+      <div style="width:220px;height:22px;background:#223;margin:18px auto;border-radius:11px;overflow:hidden;border:2px solid #556;">
+        <div id="progBar" style="width:0%;height:100%;background:#4caf7a;transition:width .15s linear;"></div>
+      </div>
+      <div id="progMsg" style="margin-top:10px;color:#ffd166;font-weight:700;text-align:center;"></div>
+      <div style="margin-top:10px"><button class="btn" id="progBtn" onclick="game.taskHold()">Mantener datos</button></div>`;
+    if(ty==='garbage') return `<div style="text-align:center;color:#cfdce9">Mantén el botón para compactar, luego tira la palanca hacia abajo.</div>
+      <div style="margin:16px 0;"><button class="btn" id="garBtn" onclick="game.garbageHold()">Compactar basura</button></div>
+      <div id="garMsg" style="color:#ffd166;font-weight:700;text-align:center;"></div>`;
+    if(ty==='calibrate') return `<div style="text-align:center;color:#cfdce9">Alinea los tres deslizadores en las marcas objetivo.</div>
+      <div id="calUI" style="display:flex;gap:18px;justify-content:center;margin-top:18px;"></div>
+      <div id="calMsg" style="margin-top:12px;color:#ffd166;font-weight:700;"></div>`;
+    if(ty==='o2') return `<div style="text-align:center;color:#cfdce9">Ingresa la secuencia de óxígeno mostrada.</div>
+      <div id="o2Seq" style="font-size:20px;letter-spacing:4px;font-weight:700;color:#4caf7a;margin:14px 0;text-align:center;"></div>
+      <input id="o2In" type="text" maxlength="6" style="width:140px;padding:8px;text-align:center;font-size:18px;">
+      <div id="o2Msg" style="margin-top:10px;color:#ffd166;font-weight:700;text-align:center;"></div>`;
+    if(ty==='asteroids') return `<div style="text-align:center;color:#cfdce9">Haz clic en los asteroides antes de que choquen con la estación.</div>
+      <div id="astUI" style="position:relative;width:300px;height:200px;background:#0a0e16;border:2px solid #334;border-radius:8px;margin:14px auto;overflow:hidden;"></div>
+      <div id="astMsg" style="color:#ffd166;font-weight:700;text-align:center;"></div>`;
+    if(ty==='sab') return `<div style="text-align:center;color:#cfdce9">Repara el panel de sabotaje. Mantén presionado para completar.</div>
+      <div style="width:200px;height:20px;background:#223;margin:18px auto;border-radius:10px;border:2px solid #a84a4a;overflow:hidden;">
+        <div id="sabBar" style="width:0%;height:100%;background:#e74c3c;transition:width .1s linear;"></div>
+      </div>
+      <button class="btn danger" id="sabBtn" onclick="game.sabHold()">Reparar sabotaje</button>`;
+    return `<div style="text-align:center;color:#cfdce9">Tarea: ${t.def.name}. Completa el minijuego.</div>`;
+  },
+  closeTask(){
+    if(!taskTarget) return;
+    state='PLAYING'; setLayers([]);
+    taskTarget.active=false;
+    if(!taskTarget.completed){ players[localId].task = null; }
+    taskTarget=null;
+    this.updateActions();
+  },
+  taskHold(){
+    if(!taskTarget) return;
+    const t = taskTarget;
+    if(t.def.type!=='upload'&&t.def.type!=='download') return;
+    t.progress = Math.min(100, t.progress + 14);
+    document.getElementById('progBar').style.width = t.progress+'%';
+    if(t.progress>=100){ this.completeTask(t); }
+  },
+  garbageHold(){
+    if(!taskTarget) return;
+    const t = taskTarget;
+    if(!t.data.gar){ t.data.gar=0; document.getElementById('garBtn').textContent='Tirar palanca'; document.getElementById('garMsg').textContent='Basura compactada. Ahora tira la palanca.'; toneOk(); return; }
+    t.data.gar++;
+    if(t.data.gar>=2){ this.completeTask(t); }
+  },
+  sabHold(){
+    if(!taskTarget) return;
+    const t = taskTarget;
+    t.progress = Math.min(100, t.progress + 16);
+    document.getElementById('sabBar').style.width = t.progress+'%';
+    if(t.progress>=100){ this.fixSabotage(t); }
+  },
+  fixSabotage(t){
+    t.completed=true;
+    if(activeSab && activeSab.id===t.def.id){
+      activeSab.fixed=true;
+      chat(`Sabotaje de ${activeSab.panel.name} reparado.`, 'sistema');
+      toneOk();
+    }
+    this.checkWin();
+    setTimeout(()=>this.closeTask(), 600);
+  },
+  completeTask(t){
+    t.completed = true;
+    chat(`Tarea completada: ${t.def.name}.`, 'sistema');
+    toneOk();
+    const p = players[localId];
+    if(p.task===t) p.task=null;
+    this.checkWin();
+    setTimeout(()=>this.closeTask(), 700);
+  },
+  checkWin(){
+    const crewAlive = players.filter(p=>p.alive && !(p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón')).length;
+    const impAlive = players.filter(p=>p.alive && (p.role==='Impostor'||p.role==='Sierpe'||p.role==='Fantasma'||p.role==='Camaleón')).length;
+    const tasksDone = tasks.filter(t=>t.completed).length;
+    const tasksTotal = tasks.length;
+    // critical sabotage timer
+    if(activeSab && activeSab.critical && Date.now()/1000 > activeSab.end && !activeSab.fixed){
+      this.endGame('Los impostores ganan', `El sabotaje de ${activeSab.panel.name} no se resolvió a tiempo.`);
+      return;
+    }
+    if(tasksTotal>0 && tasksDone>=tasksTotal){
+      this.endGame('¡Los tripulantes ganan!', 'Se completaron todas las tareas.');
+      return;
+    }
+    if(impAlive>0 && crewAlive<=impAlive){
+      this.endGame('Los impostores ganan', 'Quedan tantos impostores como tripulantes.');
+      return;
+    }
+    if(crewAlive===0){
+      this.endGame('Los impostores ganan', 'No quedan tripulantes con vida.');
+      return;
+    }
+  },
+  endGame(title, msg){
+    state='GAMEOVER'; setLayers(['layGameOver']);
+    document.getElementById('goTitle').textContent = title;
+    document.getElementById('goMsg').textContent = msg;
+    toneBad();
+  },
+  respawnGhost(){
+    // spectator mode after death
+    const p = players[localId];
+    state='DEAD'; setLayers([]);
+    this.updateActions();
+  },
+  updateActions(){
+    document.getElementById('actions').innerHTML = this.actionButtonsHTML();
+  }
+};
+
+/* ---------- rendering ---------- */
+function drawWorld(){
+  ctx.fillStyle='#0f1720'; ctx.fillRect(0,0,WORLD.w,WORLD.h);
+  // rooms
+  for(const r of ROOMS){
+    ctx.fillStyle = r.name==='Sala de Aire'? '#16213a' : '#141c23';
+    ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.strokeStyle='#2a3a4a'; ctx.lineWidth=2; ctx.strokeRect(r.x,r.y,r.w,r.h);
+  }
+  // walls
+  ctx.fillStyle='#1e2a36';
+  for(const w of WALLS) ctx.fillRect(w.x,w.y,w.w,w.h);
+  // zone label
+  const zel = document.getElementById('zone');
+  if(zel) zel.textContent = currentZone;
+  // emergency button
+  ctx.fillStyle='rgba(231,76,60,0.25)';
+  ctx.beginPath(); ctx.arc(EMERGENCY.x,EMERGENCY.y,EMERGENCY.r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#e74c3c'; ctx.lineWidth=3; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='13px bold sans-serif'; ctx.textAlign='center'; ctx.fillText('REUNIÓN', EMERGENCY.x, EMERGENCY.y+5);
+  // vents (small dots)
+  ctx.fillStyle='rgba(127,179,232,0.35)';
+  for(const v of VENTS){ ctx.beginPath(); ctx.arc(v.x,v.y,7,0,Math.PI*2); ctx.fill(); }
+  // sabotage panels
+  ctx.fillStyle='rgba(168,74,74,0.35)';
+  for(const s of SAB_PANELS){
+    ctx.fillRect(s.x-14,s.y-14,28,28);
+    ctx.strokeStyle='#a84a4a'; ctx.lineWidth=2; ctx.strokeRect(s.x-14,s.y-14,28,28);
+  }
+  // tasks
+  for(const t of tasks) t.draw();
+  // bodies
+  for(const b of bodies){
+    if(b.reported) continue;
+    ctx.save(); ctx.translate(b.x,b.y);
+    const now = Date.now()/1000;
+    let alpha = 1;
+    if(b.dissolve && now > b.time + b.dissolve){
+      alpha = 0; // vanish
+    } else if(b.dissolve){
+      alpha = 1 - (now-b.time)/b.dissolve;
+    }
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle=b.color; ctx.beginPath(); ctx.arc(0,0,14,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#444'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillText('☠',0,3);
+    ctx.restore();
+  }
+  // players
+  for(const p of players) p.draw();
+  // local player highlight / camera
+  const lp = players[localId];
+  if(lp){
+    // minimap
+    const mm = document.getElementById('minimap');
+    mm.style.display = 'block';
+    // draw minimap via canvas overlay? keep CSS box only; draw dots in a small canvas would need another canvas. Skip drawing here.
+  }
+}
+function drawMinimap(){
+  // We don't have a second canvas; draw minimap into the CSS div using an offscreen canvas
+  let mc = document.getElementById('__mm');
+  if(!mc){ mc = document.createElement('canvas'); mc.id='__mm'; mc.width=170; mc.height=140; document.getElementById('minimap').appendChild(mc); }
+  const c = mc.getContext('2d');
+  c.clearRect(0,0,170,140);
+  c.fillStyle='#0b0f15'; c.fillRect(0,0,170,140);
+  c.strokeStyle='#3e4d5c'; c.strokeRect(2,2,166,136);
+  const sx = 166/WORLD.w, sy = 136/WORLD.h;
+  // rooms
+  c.fillStyle='#2a3a4a';
+  for(const r of ROOMS){ c.fillRect(4+r.x*sx, 4+r.y*sy, r.w*sx, r.h*sy); }
+  // players
+  for(const p of players){
+    if(!p.alive) continue;
+    c.fillStyle = p.roleColor;
+    c.beginPath(); c.arc(4+p.x*sx, 4+p.y*sy, 3,0,Math.PI*2); c.fill();
+  }
+  // local
+  const lp = players[localId];
+  if(lp){
+    c.fillStyle='#fff'; c.beginPath(); c.arc(4+lp.x*sx,4+lp.y*sy,4.5,0,Math.PI*2); c.stroke(); c.strokeStyle='#fff'; c.stroke();
+  }
+  // locator blip
+  if(lp && lp.locator.active && lp.locator.target){
+    const t = players.find(x=>x.id===lp.locator.target);
+    if(t && t.alive){
+      c.fillStyle=t.color; c.beginPath(); c.arc(4+t.x*sx,4+t.y*sy,4,0,Math.PI*2); c.fill();
+    }
+  }
+}
+function drawUIEffects(){
+  const lp = players[localId];
+  if(!lp) return;
+  // locator direction
+  if(lp.locator.active && lp.locator.target){
+    const t = players.find(x=>x.id===lp.locator.target);
+    if(t && t.alive){
+      const dx = t.x - lp.x, dy = t.y - lp.y, d = Math.hypot(dx,dy);
+      const ex = dx/d, ey = dy/d;
+      const ax = width/2 + ex*110, ay = height/2 + ey*110;
+      ctx.save(); ctx.translate(ax,ay);
+      ctx.fillStyle=t.color; ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(8,10); ctx.lineTo(-8,10); ctx.fill();
+      ctx.restore();
+      const rem = Math.max(0, Math.ceil(lp.locator.end - Date.now()/1000));
+      ctx.fillStyle=t.color; ctx.font='14px bold sans-serif'; ctx.textAlign='center';
+      ctx.fillText(`Rastreando ${t.nameEff} ${rem}s`, width/2, height/2-130);
+    }
+  }
+  // sabotage warning
+  if(activeSab){
+    const rem = Math.max(0, Math.ceil(activeSab.end - Date.now()/1000));
+    ctx.fillStyle = activeSab.critical?'#e74c3c':'#f1c40f';
+    ctx.font='16px bold sans-serif'; ctx.textAlign='center';
+    ctx.fillText(`SABOTAJE: ${activeSab.panel.name} — ${rem}s`, width/2, 40);
+  }
+}
+// main loop
+let last = Date.now()/1000;
+function loop(){
+  const now = Date.now()/1000; const dt = Math.min(now-last, 0.05); last = now;
+  // update entities (local input + bot AI handled inside Player.update)
+  for(const p of players) p.update(dt);
+  // camera
+  const lp = players[localId];
+  if(lp){
+    const tx = lp.x, ty = lp.y;
+    cam.x += (tx - width/2 - cam.x)*0.12;
+    cam.y += (ty - height/2 - cam.y)*0.12;
+    // zone
+    const r = findRoom(lp.x, lp.y);
+    if(r && r.name!==currentZone){ currentZone = r.name; chat(`Zona: ${currentZone}`, 'sistema'); }
+    // cinematic movement: move ship to map during cinematic
+    if(state==='CINEMATIC'){
+      // fly players in from left
+      const t = cinematicEnd - now;
+      if(t<=0){ game.beginCinematicPhase2(); }
+      // move everyone rightward during cinematic
+      for(const p of players){ p.x += 90*dt; if(p.x>300) p.x=300; }
+      cam.x = lp.x - width/2;
+    }
+  }
+  // clear
+  ctx.save();
+  ctx.translate(width/2 - cam.x, height/2 - cam.y);
+  // dynamic tilt
+  const lp2 = players[localId];
+  if(lp2 && state==='PLAYING'){
+    const tilt = Math.sin(Date.now()/200)*0 + lp2.vx*0.0012;
+    ctx.translate(width/2, height/2);
+    ctx.rotate(clamp(tilt,-0.12,0.12));
+    ctx.translate(-width/2, -height/2);
+  }
+  drawWorld();
+  ctx.restore();
+  drawMinimap();
+  drawUIEffects();
+  // role reveal overlay handled by HTML layer with timer
+  if(roleRevealEnd && now > roleRevealEnd){
+    const el=document.getElementById('roletext');
+    if(el) el.style.display='none';
+    roleRevealEnd=0;
+  }
+  requestAnimationFrame(loop);
+}
+window.game = game;
+resize();
+game.start();
+requestAnimationFrame(loop);
+
+/* ---------- task-specific UI wiring (renders after layer show) ---------- */
+// wiring
+window.__wireSel = null;
+function renderWiring(){
+  const cont = document.getElementById('wireUI');
+  if(!cont) return;
+  cont.innerHTML='';
+  const colors = ['#e74c3c','#f1c40f','#2ecc71','#3498db'];
+  const left = [], right = shuffle([...colors]);
+  colors.forEach(c=>{
+    const b=document.createElement('div');
+    b.style.width='26px'; b.style.height='26px'; b.style.background=c; b.style.border='2px solid #fff'; b.style.borderRadius='6px'; b.style.cursor='pointer';
+    b.onclick=()=>{
+      if(!window.__wireSel){ window.__wireSel=c; b.style.boxShadow='0 0 10px #fff'; }
+      else {
+        if(window.__wireSel===c){ taskWireMatch(); }
+        else { window.__wireSel=null; b.style.boxShadow=''; chat('Color incorrecto, intenta de nuevo.','sistema'); toneBad(); }
+      }
+    };
+    left.push(b);
+  });
+  right.forEach(c=>{
+    const b=document.createElement('div');
+    b.style.width='26px'; b.style.height='26px'; b.style.background=c; b.style.border='2px solid #fff'; b.style.borderRadius='6px'; b.style.opacity='0.85'; b.style.cursor='pointer';
+    b.onclick=()=>{
+      if(window.__wireSel===c){ taskWireMatch(); }
+      else { if(window.__wireSel){ window.__wireSel=null; cont.querySelectorAll('div').forEach(x=>x.style.boxShadow=''); chat('Color incorrecto.','sistema'); toneBad(); } }
+    };
+    cont.appendChild(b);
+  });
+  left.forEach(b=>cont.insertBefore(b, cont.firstChild));
+  document.getElementById('wireMsg').textContent='';
+}
+function taskWireMatch(){
+  const t = game.taskTarget;
+  if(!t) return;
+  if(!t.data.wires) t.data.wires = new Set();
+  t.data.wires.add(window.__wireSel);
+  const all = ['#e74c3c','#f1c40f','#2ecc71','#3498db'];
+  if([...all].every(c=>t.data.wires.has(c))){ game.completeTask(t); }
+  else { chat('Conectado. Sigue con los siguientes cables.','sistema'); toneOk(); }
+  window.__wireSel=null;
+  const cont=document.getElementById('wireUI');
+  if(cont){ cont.querySelectorAll('div').forEach(x=>x.style.boxShadow=''); }
+  setTimeout(renderWiring, 400);
+}
+// card slider
+window.__cardDragging=false; window.__cardX=0;
+function initCard(){
+  const bar=document.getElementById('cardBar'); const zone=document.getElementById('cardZone'); const msg=document.getElementById('cardMsg');
+  if(!bar) return;
+  const move=(x)=>{
+    const r=bar.parentElement.getBoundingClientRect();
+    let px = x-r.left; px=clamp(px,0,r.width-14); window.__cardX=px/r.width;
+    bar.style.left = (window.__cardX*100)+'%';
+  };
+  bar.onpointerdown=(e)=>{ window.__cardDragging=true; move(e.clientX); e.target.setPointerCapture(e.pointerId); };
+  window.onpointermove=(e)=>{ if(window.__cardDragging) move(e.clientX); };
+  window.onpointerup=()=>{
+    if(window.__cardDragging){ window.__cardDragging=false; const zx=0.4; if(window.__cardX>=zx && window.__cardX<=zx+0.2){ game.completeTask(game.taskTarget); msg.textContent='Tarjeta aceptada.'; toneOk(); }
+    else { msg.textContent='Velocidad incorrecta. Intenta de nuevo.'; toneBad(); window.__cardX=0; bar.style.left='0%'; } }
+  };
+}
+// asteroids
+window.__asteroids=[];
+function initAsteroids(){
+  const cont=document.getElementById('astUI'); if(!cont) return;
+  cont.innerHTML=''; window.__asteroids=[];
+  const msg=document.getElementById('astMsg'); let hit=0;
+  const spawn=()=>{
+    const d=document.createElement('div');
+    d.style.position='absolute'; d.style.width='22px'; d.style.height='22px'; d.style.background='#888'; d.style.borderRadius='50%';
+    d.style.border='2px solid #555'; d.style.left=Math.random()*278+'px'; d.style.top='-30px';
+    const spd=1.5+Math.random()*2.5;
+    let y=-30;
+    const tick=()=>{
+      if(!taskTarget||!taskTarget.active) return;
+      y+=spd; d.style.top=y+'px';
+      if(y>200){ hit=0; msg.textContent='Un asteroide impactó. Intenta de nuevo.'; toneBad(); setTimeout(()=>{ hit=0; window.__asteroids=[]; cont.innerHTML=''; for(let i=0;i<4;i++) spawn(); }, 1200); return; }
+      window.__asteroids.push({el:d});
+      requestAnimationFrame(tick);
+    };
+    d.onpointerdown=()=>{ hit++; d.remove(); msg.textContent=`Asteroides destruidos: ${hit}/5`; toneOk(); if(hit>=5){ setTimeout(()=>game.completeTask(game.taskTarget), 500); } };
+    cont.appendChild(d);
+    requestAnimationFrame(tick);
+  };
+  for(let i=0;i<4;i++) spawn();
+}
+// o2 sequence
+window.__o2Seq='';
+function initO2(){
+  const seq=''+Math.floor(100000+Math.random()*900000);
+  window.__o2Seq=seq;
+  document.getElementById('o2Seq').textContent = seq.split('').join(' ');
+  document.getElementById('o2In').value='';
+  const inp=document.getElementById('o2In');
+  inp.oninput=()=>{
+    if(inp.value===seq){ game.completeTask(game.taskTarget); document.getElementById('o2Msg').textContent='Secuencia correcta.'; toneOk(); }
+    else if(seq.startsWith(inp.value)){ document.getElementById('o2Msg').textContent=''; }
+    else { document.getElementById('o2Msg').textContent='Incorrecto.'; toneBad(); setTimeout(()=>inp.value='',400); }
+  };
+}
+// calibrate sliders
+function initCalibrate(){
+  const cont=document.getElementById('calUI'); if(!cont) return;
+  cont.innerHTML='';
+  const targets=[0.3,0.6,0.85]; const vals=[0,0,0]; let done=0;
+  const msg=document.getElementById('calMsg');
+  for(let i=0;i<3;i++){
+    const wrap=document.createElement('div'); wrap.style.display='flex'; wrap.style.flexDirection='column'; wrap.style.alignItems='center'; wrap.style.gap='6px';
+    const label=document.createElement('div'); label.textContent=`Slider ${i+1}`; label.style.color='#cfdce9'; label.style.fontSize='12px';
+    const track=document.createElement('div'); track.style.width='140px'; track.style.height='10px'; track.style.background='#223'; track.style.borderRadius='5px'; track.style.position='relative';
+    const mark=document.createElement('div'); mark.style.position='absolute'; mark.style.left=(targets[i]*100)+'%'; mark.style.top='-6px'; mark.style.bottom='-6px'; mark.style.width='3px'; mark.style.background='#4caf7a';
+    const thumb=document.createElement('div'); thumb.style.width='16px'; thumb.style.height='22px'; thumb.style.background='#fff'; thumb.style.borderRadius='4px'; thumb.style.position='absolute'; thumb.style.left='0%'; thumb.style.top='-6px'; thumb.style.cursor='pointer';
+    track.appendChild(mark); track.appendChild(thumb); wrap.appendChild(label); wrap.appendChild(track); cont.appendChild(wrap);
+    let drag=false;
+    thumb.onpointerdown=(e)=>{ drag=true; e.target.setPointerCapture(e.pointerId); };
+    window.onpointermove=(e)=>{ if(!drag) return; const r=track.getBoundingClientRect(); let x=e.clientX-r.left; x=clamp(x,0,r.width); vals[i]=x/r.width; thumb.style.left=(vals[i]*100)+'%'; check(); };
+    window.onpointerup=()=>{ drag=false; };
+  }
+  function check(){
+    if(vals.every((v,i)=>Math.abs(v-targets[i])<0.06)){
+      done++;
+      if(done===1) game.completeTask(game.taskTarget);
+    }
+  }
+}
+// initialize task sub-uis when task layer opens
+const _openTaskOrig = null;
+// We hook by polling in loop for active task type init
+let __taskInited = null;
+function pollTaskInit(){
+  const t = game.taskTarget; if(!t) return;
+  if(__taskInited===t.id && t.active) return;
+  __taskInited = t.id;
+  const ty=t.def.type;
+  if(ty==='wiring'){ setTimeout(renderWiring, 100); }
+  if(ty==='card'){ initCard(); }
+  if(ty==='upload'||ty==='download'){ document.getElementById('progBar').style.width='0%'; document.getElementById('progMsg').textContent=''; }
+  if(ty==='garbage'){ document.getElementById('garBtn').textContent='Compactar basura'; document.getElementById('garMsg').textContent=''; t.data.gar=0; }
+  if(ty==='calibrate'){ initCalibrate(); }
+  if(ty==='o2'){ initO2(); }
+  if(ty==='asteroids'){ initAsteroids(); }
+  if(ty==='sab'){ document.getElementById('sabBar').style.width='0%'; }
+}
+// patch game.startTask and closeTask to poll
+const _startTask = game.startTask.bind(game);
+game.startTask = function(t){ _startTask(t); setTimeout(pollTaskInit, 50); };
+
+/* ---------- layer management ---------- */
+function setLayers(ids){
+  document.querySelectorAll('.layer').forEach(el=> el.classList.remove('show'));
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.add('show'); });
+}
+
+/* expose small helpers for onclicks in HTML already bound via properties above */
+
+})();
+</script>
+</body>
+</html>
